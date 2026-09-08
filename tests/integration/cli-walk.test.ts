@@ -156,6 +156,16 @@ insights:
     expect(out).toContain('IN01010');
   });
 
+  it('moves on from a claim the reviewer deferred', () => {
+    // Deferring is an answer. Left as proposed, a claim nobody can settle is
+    // offered again every time and the walk cannot get past it.
+    runUbml('walk set IN01000 deferred');
+    const out = runUbml('walk next');
+
+    expect(out).toContain('IN01010');
+    expect(out).not.toContain('IN01000');
+  });
+
   it('changes one line and leaves the rest of the file alone', () => {
     const before = readFileSync(join(tempDir, 'insights.ubml.yaml'), 'utf8');
 
@@ -185,6 +195,107 @@ insights:
 
     expect(out).not.toContain('→');
     expect(readFileSync(join(tempDir, 'insights.ubml.yaml'), 'utf8')).toContain('status: proposed');
+  });
+
+  describe('the element half of a bundle', () => {
+    beforeEach(() => {
+      writeFileSync(join(tempDir, 'actors.ubml.yaml'), `ubml: "${SCHEMA_VERSION}"
+actors:
+  AC01000:
+    name: Someone the claim implies
+    type: role
+    kind: human
+    reviewStatus: proposed
+    derivedFrom: [IN01000]
+`);
+    });
+
+    it('shows the element the claim would create', () => {
+      const out = runUbml('walk next');
+
+      // Reviewing the claim without it approves the extraction and leaves the
+      // interpretation unasked.
+      expect(out).toContain('Would add');
+      expect(out).toContain('AC01000');
+      expect(out).toContain('actor');
+    });
+
+    it('records the element with its own vocabulary', () => {
+      runUbml('walk set AC01000 accepted');
+
+      expect(readFileSync(join(tempDir, 'actors.ubml.yaml'), 'utf8'))
+        .toContain('reviewStatus: accepted');
+    });
+
+    it('refuses an insight status on an element', () => {
+      runUbml('walk set AC01000 validated');
+
+      expect(readFileSync(join(tempDir, 'actors.ubml.yaml'), 'utf8'))
+        .toContain('reviewStatus: proposed');
+    });
+
+    it('counts the elements left, not the insights', () => {
+      // On a workspace whose claims were settled before reviewStatus existed,
+      // reporting the insight backlog leaves the number unmoved and the command
+      // reads as though it did nothing.
+      const out = runUbml('walk set AC01000 accepted');
+
+      expect(out).toContain('elements awaiting review');
+      expect(out).not.toContain('insights still proposed');
+    });
+
+    it('lets a reviewer change their mind after accepting', () => {
+      runUbml('walk set AC01000 accepted');
+      runUbml('walk set AC01000 rejected');
+
+      expect(readFileSync(join(tempDir, 'actors.ubml.yaml'), 'utf8'))
+        .toContain('reviewStatus: rejected');
+    });
+
+    it('stops offering it once answered', () => {
+      runUbml('walk set AC01000 accepted');
+
+      expect(runUbml('walk next')).not.toContain('Would add');
+    });
+  });
+
+  describe('an element that contains other elements', () => {
+    // A process holds steps and each of them carries the same field. The
+    // process's own sits after them here, which is where anyone writing YAML by
+    // hand puts it.
+    beforeEach(() => {
+      writeFileSync(join(tempDir, 'process.ubml.yaml'), `ubml: "${SCHEMA_VERSION}"
+processes:
+  PR01000:
+    name: A process the claim implies
+    steps:
+      ST01000:
+        name: A step inside it
+        kind: action
+        reviewStatus: proposed
+        derivedFrom: [IN01000]
+    reviewStatus: proposed
+    derivedFrom: [IN01000]
+`);
+    });
+
+    it('records the answer against the id it was given', () => {
+      runUbml('walk set PR01000 accepted');
+      const after = readFileSync(join(tempDir, 'process.ubml.yaml'), 'utf8');
+
+      // Read by position, because both lines say the same thing.
+      const [step, process] = after.split('reviewStatus: ').slice(1).map((s) => s.split('\n')[0]);
+      expect(step).toBe('proposed');
+      expect(process).toBe('accepted');
+    });
+
+    it('leaves a nested element to be answered by its own id', () => {
+      runUbml('walk set PR01000 accepted');
+      runUbml('walk set ST01000 accepted');
+      const after = readFileSync(join(tempDir, 'process.ubml.yaml'), 'utf8');
+
+      expect(after.split('reviewStatus: accepted').length - 1).toBe(2);
+    });
   });
 
   it('reports when nothing is left', () => {
