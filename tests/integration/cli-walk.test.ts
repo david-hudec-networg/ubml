@@ -12,6 +12,7 @@ import { join } from 'path';
 import { tmpdir } from 'os';
 import { execSync } from 'child_process';
 import { SCHEMA_VERSION } from '../../src/constants.js';
+import { parse } from 'yaml';
 
 describe('CLI Walk Command', () => {
   let tempDir: string;
@@ -49,7 +50,8 @@ insights:
     status: proposed
     source: SR01000
     confidence: 0.9
-    context: "the verbatim thing someone said"
+    quote: ["the verbatim thing someone said"]
+    context: "and this is how to read it"
 `;
 
   beforeEach(() => {
@@ -74,6 +76,64 @@ insights:
     }
   }
 
+  describe('who settled it', () => {
+    it('writes the reviewer onto a claim that has never carried one', () => {
+      // The delegated walk is the only case --by is for, and on a fresh
+      // extraction nothing carries reviewedBy - so rewriting an existing line
+      // was rewriting a line that is never there.
+      const out = runUbml('walk set IN01000 validated --by "Jan Zmeskal"');
+
+      expect(out).toContain('Jan Zmeskal');
+      const file = readFileSync(join(tempDir, 'insights.ubml.yaml'), 'utf8');
+      expect(file).toContain('reviewedBy: Jan Zmeskal');
+    });
+
+    it('puts it beside the answer it qualifies, inside the right claim', () => {
+      runUbml('walk set IN01000 validated --by "Jan Zmeskal"');
+
+      const lines = readFileSync(join(tempDir, 'insights.ubml.yaml'), 'utf8').split('\n');
+      const at = lines.findIndex((l) => l.includes('reviewedBy:'));
+      expect(lines[at - 1].trim()).toBe('status: validated');
+      // And on the claim it was asked about, not the one above it.
+      const owner = lines.slice(0, at).reverse().find((l) => /^\s+IN\d+:/.test(l));
+      expect(owner?.trim()).toBe('IN01000:');
+    });
+
+    it('keeps a name that would otherwise end the document', () => {
+      runUbml('walk set IN01000 validated --by "Doe, Jane: deputy"');
+
+      const file = readFileSync(join(tempDir, 'insights.ubml.yaml'), 'utf8');
+      // Unquoted, the colon would make the rest of the line a nested mapping.
+      expect(file).toContain('reviewedBy: "Doe, Jane: deputy"');
+      // And it still reads back as the name that went in.
+      const parsed = parse(file) as { insights: Record<string, { reviewedBy?: string }> };
+      expect(parsed.insights.IN01000.reviewedBy).toBe('Doe, Jane: deputy');
+    });
+
+    it('says so rather than swallowing it when the element cannot hold one', () => {
+      // reviewedBy is an insight's field. An element records the judgement in
+      // reviewStatus and who made it in the commit, so a --by here goes
+      // nowhere and the reviewer has to be told that.
+      // An element is offered for review because it cites a claim, so
+      // derivedFrom is what makes this a proposed element at all.
+      writeFileSync(
+        join(tempDir, 'process.ubml.yaml'),
+        `ubml: "${SCHEMA_VERSION}"
+processes:
+  PR01000:
+    name: A process
+    reviewStatus: proposed
+    derivedFrom: [IN01000]
+`,
+      );
+
+      const out = runUbml('walk set PR01000 accepted --by "Jan Zmeskal"');
+
+      expect(out).toContain('not recorded on an element');
+      expect(readFileSync(join(tempDir, 'process.ubml.yaml'), 'utf8')).not.toContain('Jan Zmeskal');
+    });
+  });
+
   it('takes the earliest source first, not the first id', () => {
     const out = runUbml('walk next');
 
@@ -85,10 +145,19 @@ insights:
   it('shows the source text beside the claim', () => {
     const out = runUbml('walk next');
 
-    expect(out).toContain('Source says');
-    expect(out).toContain('the verbatim thing someone said');
-    expect(out).toContain('Extracted as');
-    expect(out).toContain('From the earlier note.');
+    // Both quoted, because both are things the reviewer is asked to agree with.
+    expect(out).toContain('> the verbatim thing someone said');
+    expect(out).toContain('> From the earlier note.');
+  });
+
+  it('quotes what was said and does not quote the reading of it', () => {
+    const out = runUbml('walk next');
+
+    // `context` used to carry the quote, so a reviewer could not tell the
+    // evidence from the extractor's gloss on it, and nothing could check
+    // either against the source.
+    expect(out).toContain('and this is how to read it');
+    expect(out).not.toContain('> and this is how to read it');
   });
 
   it('puts the source before the extraction, and the ID last', () => {
@@ -96,22 +165,35 @@ insights:
 
     // The rules this replaces used to live in the skill: label both blocks,
     // evidence before claim, ID last so the reviewer reads before decoding.
-    expect(out.indexOf('Source says')).toBeLessThan(out.indexOf('Extracted as'));
-    expect(out.indexOf('Extracted as')).toBeLessThan(out.indexOf('IN01000'));
+    expect(out.indexOf('> the verbatim thing someone said'))
+      .toBeLessThan(out.indexOf('From the earlier note.'));
+    expect(out.indexOf('From the earlier note.')).toBeLessThan(out.indexOf('IN01000'));
     expect(out.trimEnd().endsWith('IN01000')).toBe(true);
   });
 
   it('leads with position, not identity', () => {
     const out = runUbml('walk next');
 
-    expect(out).toMatch(/Source 1 of 2 .* insight 1 of 1/);
-    expect(out.indexOf('Source 1 of 2')).toBeLessThan(out.indexOf('IN01000'));
+    expect(out).toMatch(/source 1\/2, 1\/1 claims/);
+    expect(out.indexOf('source 1/2')).toBeLessThan(out.indexOf('IN01000'));
   });
 
-  it('opens a source with how many insights it holds', () => {
+  it('opens a source with what it is and who was there', () => {
     const out = runUbml('walk next');
 
-    expect(out).toContain('1 insights');
+    // A name alone left the reviewer nothing to go and check the claim against.
+    expect(out).toContain('claims 1');
+    expect(out).toContain('type document');
+  });
+
+  it('shows every field of the claim, not the handful it once loaded', () => {
+    const out = runUbml('walk next');
+
+    // Tags, links and the note explaining the reading never reached the
+    // reviewer, because the loader did not read them off the file.
+    expect(out).toContain('kind ');
+    expect(out).toContain('confidence ');
+    expect(out).toContain('date ');
   });
 
   it('counts as restating only what points back at an earlier source', () => {
@@ -215,9 +297,11 @@ actors:
 
       // Reviewing the claim without it approves the extraction and leaves the
       // interpretation unasked.
-      expect(out).toContain('Would add');
-      expect(out).toContain('AC01000');
+      expect(out).toContain('Model Update');
       expect(out).toContain('actor');
+      // Named, not numbered: an id tells a reviewer nothing about whether the
+      // element is right.
+      expect(out).toContain('Someone the claim implies');
     });
 
     it('records the element with its own vocabulary', () => {
