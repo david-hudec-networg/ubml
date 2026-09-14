@@ -28,6 +28,7 @@ import { addCommand } from './commands/add/index';
 import { showCommand } from './commands/show';
 import { helpCommand } from './commands/help';
 import { syntaxCommand, idsCommand, enumsCommand, nextidCommand, syncidsCommand } from './commands/ref';
+import { nextCommand } from './commands/next';
 
 /**
  * Create and configure the CLI program.
@@ -61,6 +62,7 @@ ${chalk.dim('Documentation: https://ubml.talxis.com/docs')}
   program.addCommand(addCommand());       // 3. Add content
   program.addCommand(validateCommand());  // 4. Validate
   program.addCommand(showCommand());      // 5. Visualize workspace
+  program.addCommand(nextCommand());      // 6. What is outstanding
   program.addCommand(helpCommand());      // Unified help
   
   // Quick reference commands
