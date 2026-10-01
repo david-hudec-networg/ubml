@@ -9,6 +9,8 @@ import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { SCHEMA_VERSION } from '../../src/constants.js';
+import { validateWorkspace } from '../../src/node/validator.js';
+import { parse } from 'yaml';
 import { DOCUMENT_TYPES } from '../../src/generated/data.js';
 import { execSync } from 'child_process';
 
@@ -138,6 +140,69 @@ describe('CLI Init Command', () => {
       // Full should create multiple files
       const ubmlFiles = files.filter(f => f.endsWith('.ubml.yaml'));
       expect(ubmlFiles.length).toBeGreaterThan(1);
+    });
+  });
+
+  describe('the scaffold is a worked example', () => {
+    it('validates with no errors, so the shape it teaches is one the schema accepts', async () => {
+      runUbml('init test-project');
+
+      const result = await validateWorkspace(join(tempDir, 'test-project'));
+      const errors = result.files.flatMap((f) => f.errors);
+
+      // Warnings are expected and say an id is defined and never referenced,
+      // which is what a leaf element looks like. Errors are not.
+      expect(errors.map((e) => `${e.code}: ${e.message}`)).toEqual([]);
+      expect(result.valid).toBe(true);
+    });
+
+    it('ships the whole chain: a source, its stored text, a claim quoting it, a step citing the claim', () => {
+      runUbml('init test-project');
+      const dir = join(tempDir, 'test-project');
+
+      const read = (f: string) => parse(readFileSync(join(dir, f), 'utf8'));
+      const [srId, source] = Object.entries(read('sources.ubml.yaml').sources)[0] as [string, Record<string, string>];
+      const [inId, insight] = Object.entries(read('insights.ubml.yaml').insights)[0] as [string, Record<string, unknown>];
+
+      // The pointer resolves. SOURCE_FILE_MISSING is an error precisely because
+      // a file that is not there looks like evidence that is filed and is not.
+      expect(existsSync(join(dir, source.file))).toBe(true);
+
+      expect(insight.source).toBe(srId);
+      expect(insight.quote).toBeInstanceOf(Array);
+      const stored = readFileSync(join(dir, source.file), 'utf8');
+      for (const quote of insight.quote as string[]) {
+        expect(stored).toContain(quote);
+      }
+
+      const process = Object.values(read('process.ubml.yaml').processes)[0] as {
+        steps: Record<string, { derivedFrom?: string[]; reviewStatus?: string }>;
+      };
+      const derived = Object.values(process.steps).filter((st) => st.derivedFrom?.length);
+      expect(derived).toHaveLength(1);
+      expect(derived[0].derivedFrom).toContain(inId);
+      // Proposed, not accepted: nobody has reviewed a scaffold.
+      expect(derived[0].reviewStatus).toBe('proposed');
+    });
+
+    it('explains itself, so nobody has to read somebody else\'s project to see the shape', () => {
+      runUbml('init test-project');
+
+      const readme = readFileSync(join(tempDir, 'test-project', 'README.md'), 'utf8');
+
+      for (const file of ['sources.ubml.yaml', 'insights.ubml.yaml', 'process.ubml.yaml', 'actors.ubml.yaml']) {
+        expect(readme).toContain(file);
+      }
+      expect(readme).toContain('derivedFrom');
+      expect(readme).toContain('reviewStatus');
+    });
+
+    it('leaves the sample out of --minimal, which is what minimal means', () => {
+      runUbml('init test-project --minimal');
+      const dir = join(tempDir, 'test-project');
+
+      expect(existsSync(join(dir, 'sources'))).toBe(false);
+      expect(existsSync(join(dir, 'README.md'))).toBe(false);
     });
   });
 

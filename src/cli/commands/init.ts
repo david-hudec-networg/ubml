@@ -10,7 +10,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { mkdirSync, writeFileSync, existsSync, readdirSync, readFileSync } from 'fs';
-import { join, resolve, basename } from 'path';
+import { join, resolve, basename, relative } from 'path';
 import { serialize } from '../../index';
 import { findWorkspaceFile } from '../../node/id-scanner';
 import { 
@@ -70,7 +70,31 @@ function generateVscodeExtensions(): { recommendations: string[] } {
 /**
  * Document template type.
  */
-type TemplateType = 'workspace' | 'process' | 'actors' | 'insights';
+type TemplateType = 'workspace' | 'process' | 'actors' | 'insights' | 'sources';
+
+/**
+ * The stored text the scaffolded source points at.
+ *
+ * It has to exist: a `file` that does not resolve is a validation error, on the
+ * grounds that it looks like the evidence is filed when it is not. So the
+ * scaffold ships the companion file rather than a pointer into nothing.
+ */
+const SAMPLE_SOURCE_FILE = 'kickoff-interview.md';
+
+const SAMPLE_QUOTE =
+  'It arrives twice - once in the mail and once in the system, and we key the second one in by hand.';
+
+const SAMPLE_SOURCE_TEXT = `# Kickoff interview
+
+Replace this with the real thing - a transcript converted by \`ubml import\`, an
+exported document, notes taken in the room. Quotes are checked against the copy
+stored here, so this is the text that has to be verbatim rather than a summary
+of it.
+
+**Interviewer:** How does the work reach you today?
+
+**Warehouse manager:** ${SAMPLE_QUOTE}
+`;
 
 /**
  * Template factory for creating UBML document templates.
@@ -115,6 +139,8 @@ function createDocumentTemplate(type: TemplateType, name?: string): unknown {
                 name: 'First Activity',
                 kind: 'action',
                 description: 'First activity - describe what happens here',
+                derivedFrom: [formatId('IN', offset)],
+                reviewStatus: 'proposed',
               },
               [st3]: {
                 name: 'End',
@@ -152,14 +178,86 @@ function createDocumentTemplate(type: TemplateType, name?: string): unknown {
         ...base,
         insights: {
           [inId]: {
-            text: 'Sample insight - replace with your observations',
+            text: 'Work arrives twice, on paper and in the system, and the second copy is keyed in by hand.',
             kind: 'process-fact',
             status: 'proposed',
+            source: formatId('SR', ID_CONFIG.initOffset),
+            quote: [SAMPLE_QUOTE],
+            confidence: 0.8,
+          },
+        },
+      };
+    }
+
+    case 'sources': {
+      const srId = formatId('SR', ID_CONFIG.initOffset);
+      return {
+        ...base,
+        name: 'Sources',
+        description:
+          'Where the evidence comes from. The workspace records a source; the text it ' +
+          'records lives in ./sources/ beside it, and every quote is checked against ' +
+          'that copy.',
+        sources: {
+          [srId]: {
+            name: 'Kickoff interview',
+            type: 'interview',
+            description: 'A sample source - replace it with the first one you register.',
+            file: `./sources/${SAMPLE_SOURCE_FILE}`,
           },
         },
       };
     }
   }
+}
+
+/**
+ * The workspace explains itself, so nobody has to go and read a live engagement
+ * to find out what one looks like.
+ */
+function createReadme(displayName: string, safeName: string): string {
+  return `# ${displayName}
+
+A UBML workspace. The model says what the business wants, and it is built from
+evidence: every element traces through \`derivedFrom\` to a claim somebody
+confirmed against the source it came from.
+
+## What is here
+
+| File | Holds |
+| --- | --- |
+| \`sources.ubml.yaml\` | \`SR#####\` where the evidence came from |
+| \`sources/\` | the stored text each source points at - quotes are checked against it |
+| \`insights.ubml.yaml\` | \`IN#####\` atomic claims drawn from those sources |
+| \`process.ubml.yaml\` | \`PR#####\` and \`ST#####\` what happens, in order |
+| \`actors.ubml.yaml\` | \`AC#####\` who and what acts |
+| \`${safeName}.workspace.ubml.yaml\` | the workspace itself |
+
+\`ubml add\` creates the rest - entities, glossary, metrics, strategy and the
+others - when there is something to put in them.
+
+The scaffolded \`SR00001\`, \`IN00001\`, \`PR00001\` and \`AC00001\` are one worked
+example of the chain, there to be replaced rather than kept.
+
+## How it is worked
+
+1. **Register the source before anything is drawn from it**, and store its text
+   in \`sources/\`. \`ubml import\` converts a transcript; do not hand-roll the
+   parse, and count what came out against what went in.
+2. **Extract insights** - one claim each, quoted verbatim from the stored text.
+   They start at \`status: proposed\`.
+3. **Walk them with somebody who was there.** \`ubml walk next\` offers each
+   claim together with the model element it proposes, and the reviewer settles
+   both. A claim nobody has confirmed is not evidence.
+4. **Promote what was settled**, with \`derivedFrom\` pointing at the insight the
+   element rests on.
+5. **\`ubml validate .\`** is the gate. Zero errors before anything is merged.
+
+An insight's \`status\` is about the extraction - did the source really say this.
+An element's \`reviewStatus\` is about the modelling - did anyone agree it should
+be modelled this way. They are asked separately because they are different
+questions.
+`;
 }
 
 // =============================================================================
@@ -243,6 +341,25 @@ function createWorkspaceFiles(
   createdFiles.push(workspaceFile);
 
   if (!minimal) {
+    // The pipeline starts at a source, so the scaffold does too. The stored
+    // text is written first: the source points at it, and a pointer that does
+    // not resolve fails `validate`.
+    const sourcesDir = join(workspaceDir, 'sources');
+    mkdirSync(sourcesDir, { recursive: true });
+    const companionFile = join(sourcesDir, SAMPLE_SOURCE_FILE);
+    writeFileSync(companionFile, SAMPLE_SOURCE_TEXT);
+    createdFiles.push(companionFile);
+
+    const sourcesFile = join(workspaceDir, 'sources.ubml.yaml');
+    writeFileSync(sourcesFile, serialize(createDocumentTemplate('sources')));
+    createdFiles.push(sourcesFile);
+
+    const readmeFile = join(workspaceDir, 'README.md');
+    if (!existsSync(readmeFile)) {
+      writeFileSync(readmeFile, createReadme(displayName, safeName));
+      createdFiles.push(readmeFile);
+    }
+
     // Create sample process file
     const processFile = join(workspaceDir, 'process.ubml.yaml');
     writeFileSync(processFile, serialize(createDocumentTemplate('process')));
@@ -315,7 +432,7 @@ function createWorkspaceFiles(
   console.log();
   console.log(chalk.bold('Created files:'));
   for (const file of createdFiles) {
-    const relativePath = file.replace(workspaceDir + '/', '');
+    const relativePath = relative(workspaceDir, file);
     console.log(INDENT + success('✓') + ' ' + relativePath);
   }
 }
@@ -353,25 +470,28 @@ function printSuccessMessage(workspaceDir: string, name: string, inPlace: boolea
   }
 
   console.log();
-  console.log(INDENT + chalk.bold(inPlace ? '3.' : '3.') + ' Start editing - you\'ll get autocomplete and validation!');
-  console.log(INDENT + INDENT + dim('Open any .ubml.yaml file and start typing'));
+  console.log(INDENT + chalk.bold('3.') + ' Read ' + code('README.md') + ' - what each file holds, and the order they are worked in');
   console.log();
-  console.log(INDENT + chalk.bold(inPlace ? '4.' : '4.') + ' Add more content:');
-  console.log(INDENT + INDENT + code('ubml add') + dim('              # See what you can add'));
-  console.log(INDENT + INDENT + code('ubml add process') + dim('      # Add a new process'));
+  console.log(INDENT + chalk.bold('4.') + ' Register your first source, and store its text in ' + code('sources/') + ':');
+  console.log(INDENT + INDENT + code('ubml import <meeting.vtt> sources/<name>.md') + dim('   # a transcript'));
+  console.log(INDENT + INDENT + dim('Then replace the scaffolded SR00001 with the real one.'));
   console.log();
-  console.log(INDENT + chalk.bold(inPlace ? '5.' : '5.') + ' Validate your model:');
+  console.log(INDENT + chalk.bold('5.') + ' Draw claims from it, then walk them with somebody who was there:');
+  console.log(INDENT + INDENT + code('ubml walk next'));
+  console.log();
+  console.log(INDENT + chalk.bold('6.') + ' Validate before anything is merged:');
   console.log(INDENT + INDENT + code('ubml validate .'));
   console.log();
 
   console.log(dim('────────────────────────────────────────────────────────────'));
   console.log();
   console.log(chalk.bold('Tips:'));
+  console.log(INDENT + '• ' + dim('The scaffolded SR/IN/PR/AC are one worked example - replace them'));
   console.log(INDENT + '• ' + dim('In VS Code, press ') + code('Ctrl+Space') + dim(' for autocomplete'));
   console.log(INDENT + '• ' + dim('Hover over properties to see documentation'));
   console.log(INDENT + '• ' + dim('Red squiggles show validation errors'));
   console.log();
-  console.log('More help: ' + code('ubml docs vscode'));
+  console.log('More help: ' + code('ubml add') + dim(' for the other document types, ') + code('ubml docs vscode'));
   console.log();
 }
 
@@ -403,11 +523,18 @@ Examples:
 
 What gets created:
   ${highlight('<name>.workspace.ubml.yaml')}  Workspace configuration
+  ${highlight('README.md')}                   What each file holds, and the order (unless --minimal)
+  ${highlight('sources.ubml.yaml')}           Where the evidence came from (unless --minimal)
+  ${highlight('sources/')}                    The stored text sources point at (unless --minimal)
+  ${highlight('insights.ubml.yaml')}          Claims drawn from them (unless --minimal)
   ${highlight('process.ubml.yaml')}           Sample process (unless --minimal)
   ${highlight('actors.ubml.yaml')}            Sample actors (unless --minimal)
-  ${highlight('insights.ubml.yaml')}          Sample insights (unless --minimal)
   ${highlight('.vscode/settings.json')}       VS Code YAML schema settings
   ${highlight('.vscode/extensions.json')}     Recommended extensions
+
+The scaffolded SR00001, IN00001, PR00001 and AC00001 are one worked example of
+the chain - a source, the text it points at, a claim quoted from it, and a step
+that says which claim it came from. Replace them; do not build around them.
 `)
     .action((name: string, options: InitOptions) => {
       initCurrentDirectory(name, options);
