@@ -77,7 +77,7 @@ Fix five design flaws in the knowledge layer (Source → Insight → Model) disc
 - [ ] Update `src/semantic-validator.ts` — `source` → `sources` in ref extraction, add `attribution` ActorRef handling
 - [ ] Update CLI templates for insights
 - [ ] Update `example/insights.ubml.yaml`
-- [ ] Update `sandbox/cetin-ftth/` files
+- [ ] Update `sandbox/telecom-pilot/` files
 - [ ] Run `npm test` + `npm run build && npx tsx bin/ubml.ts validate example/`
 - [ ] Add rationale to `docs/DESIGN-DECISIONS.md`
 
