@@ -2,6 +2,18 @@
 
 UBML is maintained by [NETWORG](https://networg.com) and used in production by TALXIS®.
 
+## This fork
+
+This fork is a preview channel for TALXIS/ubml: it ships changes before, or instead of, proposing them upstream.
+
+- `master` is an exact copy of TALXIS `master`. Nothing is committed to it directly.
+- Cut every branch from `master` and open its PR into this fork's `preview`, where it merges once the work is finished. A PR to TALXIS/ubml is opened only when its maintainers want the change.
+- A fix to work still in its PR goes on the same branch; anything after the merge gets a new branch.
+- `preview` is the default branch and the one people install from. It takes upstream changes from `master` through a PR whenever TALXIS moves; where they clash with work here, upstream wins and the work is rebuilt on top.
+- Releases are cut from `preview` with a `-preview.N` version.
+- Commits that only make the fork installable (the preview version number and this section) live on `preview` alone, never on a PR branch.
+- This repository is public: no customer names, project codes, internal paths or people's names in code, commits, branch names or PR text.
+
 ## Development Setup
 
 ```bash
