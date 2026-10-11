@@ -42,9 +42,9 @@ export interface VersionInfo {
  * Throws if format is invalid.
  */
 export function validateSemver(version: string): void {
-  const semverRegex = /^\d+\.\d+\.\d+$/;
+  const semverRegex = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
   if (!semverRegex.test(version)) {
-    throw new Error(`Invalid semver format: "${version}". Expected format: X.Y.Z (e.g., "1.1.0")`);
+    throw new Error(`Invalid semver format: "${version}". Expected format: X.Y.Z or X.Y.Z-prerelease (e.g., "1.1.0")`);
   }
 }
 
