@@ -1,6 +1,6 @@
 # UBML Evaluation Findings — Reference
 
-> **Source**: Blind testing sessions (CETIN FTTH, power transformer manufacturing) conducted late 2025 / early 2026
+> **Source**: Blind testing sessions (telecom pilot, power transformer manufacturing) conducted late 2025 / early 2026
 > **Evaluators**: Simulated business analysts with no prior UBML training
 > **Date**: 2026-02-07
 > **Status**: Historical reference - preserves context from evaluation sessions
@@ -287,7 +287,7 @@ Split into:
 
 ## Test Results Summary
 
-### CETIN FTTH Blind Test
+### Telecom Pilot Blind Test
 - **Duration:** 84 min modeling + 30 min fixing
 - **Output:** 62 actors, 30 KPIs, 7 processes, 21 sources, 58 insights
 - **Errors:** 53 schema errors accumulated silently
@@ -420,5 +420,5 @@ Based on evaluation findings, these areas still need attention:
 See plans [06](../06-cli-error-messages.md), [07](../07-templates-examples.md), [08](../08-schema-discovery.md), and [09](../09-quick-capture-search.md) for detailed implementation proposals.
 
 ### Note on Completed Work
-- File splitting refactoring (Phase 6) has been completed - see `sandbox/cetin-ftth-eval/` for details
+- File splitting refactoring (Phase 6) has been completed - see `sandbox/telecom-pilot-eval/` for details
 

@@ -1,7 +1,7 @@
 # UBML Roadmap
 
 > **Last updated**: 2026-02-07
-> **Source**: Blind testing sessions (CETIN FTTH, power transformer eval), schema review, documentation audit
+> **Source**: Blind testing sessions (telecom pilot, power transformer eval), schema review, documentation audit
 > **Historical context**: [`_reference/EVALUATION-FINDINGS.md`](_reference/EVALUATION-FINDINGS.md)
 
 ---

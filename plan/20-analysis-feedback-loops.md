@@ -92,7 +92,7 @@ A scenario should be linkable to the hypothesis it tests. "What if we paralleliz
 
 ### A.3: Hypothesis ↔ Strategy Elements
 
-The CETIN sandbox demonstrates this gap clearly: hypothesis tree HT00001 maps conceptually to capabilities (CP010 "Majetkoprávní vypořádání" ≈ HY00001.3), but only through prose in descriptions. Hypotheses about improving a capability should formally reference that capability.
+The telecom pilot sandbox demonstrates this gap clearly: hypothesis tree HT00001 maps conceptually to capabilities (CP010 "Site permits" ≈ HY00001.3), but only through prose in descriptions. Hypotheses about improving a capability should formally reference that capability.
 
 **Needed**: Reference from HypothesisNode to Capability, ValueStream, or Process.
 
@@ -414,5 +414,5 @@ _Deferred until design questions are resolved. This plan needs a design session 
 - [ ] Update `docs/WORKSPACE-SEMANTICS.md` with new connections
 - [ ] Update Plan 19 to account for prerequisite-aware questions
 - [ ] Update Plan 10 (`ubml doctor`) to include staleness detection for long-lived workspaces
-- [ ] Validate against real consulting engagement (CETIN FTTH sandbox)
+- [ ] Validate against real consulting engagement (telecom pilot sandbox)
 - [ ] Validate lifecycle design against 3+ cycle scenario (Year 1 → Year 3 thought experiment)
