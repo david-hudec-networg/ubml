@@ -83,8 +83,10 @@ function load(dir: string): { claims: Claim[]; others: unknown[] } {
       if (doc.insights && typeof doc.insights === 'object') {
         for (const [id, value] of Object.entries(doc.insights as Record<string, unknown>)) {
           const body = (value ?? {}) as Record<string, unknown>;
+          // The field, then the convention it replaces: workspaces written
+          // before it existed put the same string under `custom`.
           const custom = body.custom as Record<string, unknown> | undefined;
-          const answeredBy = custom?.answeredBy;
+          const answeredBy = body.answeredBy ?? custom?.answeredBy;
           claims.push({
             id,
             text: String(body.text ?? id),

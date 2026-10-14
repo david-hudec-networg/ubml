@@ -63,6 +63,11 @@ beforeAll(() => {
     '    text: A settled claim.',
     '    status: validated',
     '    tags: [billing]',
+    '  IN00008:',
+    '    text: A question for a named person, written as a field.',
+    '    status: deferred',
+    '    tags: [fulfilment]',
+    '    answeredBy: AC00009',
   ]);
 });
 
@@ -112,6 +117,19 @@ describe('ubml next', () => {
   it('names an answerer only when the workspace does', () => {
     expect(twoTags).toContain('AC00004');
     expect(twoTags).toContain('unassigned');
+  });
+
+  it('reads the field, and still reads the key that predates it', () => {
+    // `custom.answeredBy` is what workspaces used before answeredBy was a
+    // field. Both have to resolve, or promoting it silently unassigns every
+    // question somebody has already answered for.
+    const both = runUbml('next fulfilment');
+
+    expect(both).toContain('AC00009');   // the field, on IN00008
+    expect(both).toContain('AC00004');   // custom.answeredBy, on IN00004
+
+    expect(runUbml('next --with AC00009')).toContain('written as a field');
+    expect(runUbml('next --with AC00004')).not.toContain('written as a field');
   });
 
   it('leaves settled claims out', () => {
