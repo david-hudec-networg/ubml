@@ -478,14 +478,26 @@ export function unvalidatedApproval(
   const cited = Array.isArray(derivedFrom)
     ? derivedFrom.filter((ref): ref is string => typeof ref === 'string')
     : [];
-  const rule = 'an accepted element should rest on validated insights';
-  if (cited.length === 0) return [`"${id}" is accepted but cites no insight - ${rule}`];
+  if (cited.length === 0) {
+    return [`"${id}" is accepted and cites no insight - an accepted element rests on evidence`];
+  }
   return cited.flatMap((ref) => {
     const insight = insightOf(ref);
     const status = insight?.status ?? 'proposed';
-    return insight && status !== 'validated'
-      ? [`"${id}" is accepted but rests on "${ref}", which is ${status} - ${rule}`]
-      : [];
+    if (!insight || status === 'validated') return [];
+    // Retired is settled: the claim was withdrawn, so nothing rests on it and
+    // there is no judgement to make. Deferred is not, and whether it matters
+    // depends on something only a reader can see - whether this element states
+    // the thing the claim leaves open. Saying "should rest on validated
+    // insights" for both is false for half of them, and a rule that is wrong
+    // half the time gets read past.
+    if (status === 'retired') {
+      return [`"${id}" is accepted and rests on "${ref}", which was withdrawn - cite what replaced it, or drop it`];
+    }
+    if (status === 'deferred') {
+      return [`"${id}" is accepted and rests on "${ref}", which is still open - if this element states what that claim leaves open it is not accepted; if the claim would only extend it later, this is fine`];
+    }
+    return [`"${id}" is accepted and rests on "${ref}", which is ${status} - an accepted element rests on evidence somebody has confirmed`];
   });
 }
 

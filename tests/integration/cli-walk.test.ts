@@ -503,13 +503,13 @@ actors:
 
     it('says when an accepted element rests on a claim nobody validated', () => {
       expect(runUbml('walk set AC01000 accepted'))
-        .toContain('"AC01000" is accepted but rests on "IN01000", which is proposed');
+        .toContain('"AC01000" is accepted and rests on "IN01000", which is proposed');
     });
 
     it('says nothing more once that claim is validated', () => {
       runUbml('walk set IN01000 validated');
 
-      expect(runUbml('walk set AC01000 accepted')).not.toContain('is accepted but');
+      expect(runUbml('walk set AC01000 accepted')).not.toContain('is accepted and rests');
     });
   });
 
@@ -570,7 +570,7 @@ processes:
       const accepted = runUbml('walk set AC01000 accepted');
       runUbml('walk set ST01000 rejected');
 
-      expect(accepted).toContain('"AC01000" is accepted but cites no insight');
+      expect(accepted).toContain('"AC01000" is accepted and cites no insight');
       expect(readFileSync(join(tempDir, 'actors.ubml.yaml'), 'utf8')).toContain('    reviewStatus: accepted\n');
       expect(readFileSync(join(tempDir, 'process.ubml.yaml'), 'utf8')).toContain('        reviewStatus: rejected\n');
     });
