@@ -1663,6 +1663,18 @@ claimants mean one of them is wrong. A use case lists steps of its own process
 only (`ubml/usecase-foreign-step`); steps nested inline in a step count as the
 process's own, steps of a child process do not.
 
+**Three warnings ask what the model has not said yet**, and none blocks a commit:
+
+- `goal` or `result` is missing (`ubml/usecase-missing-goal`, `-result`).
+- A step's RACI names someone else as responsible
+  (`ubml/usecase-actor-not-responsible`), which usually means the use case spans
+  two actors. A step a `system` actor is responsible for is not reported: it is
+  the system's half of the actor's sitting.
+- A `decision` step has fewer than two links out (`ubml/usecase-decision-one-way`),
+  so its other outcomes are missing from the ways through the use case. A decision
+  whose branches sit in an `alt` or `opt` block is not reported, because the
+  block holds them.
+
 ### Consequences
 
 - A workspace without use cases is unchanged.

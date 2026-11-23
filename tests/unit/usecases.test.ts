@@ -174,3 +174,75 @@ describe('the steps of a use case', () => {
     expect(result.errors.map((e) => e.code)).toEqual(['ubml/undefined-reference']);
   });
 });
+
+describe('use case warnings', () => {
+  const codes = async (parts: Parameters<typeof purchasing>[0]) =>
+    (await check(parts)).warnings.map((w) => w.code).filter((code) => code?.startsWith('ubml/usecase-'));
+
+  const DECIDE = [
+    'UC00002:',
+    '  name: "Decide on a purchase request"',
+    '  actor: AC00002',
+    '  goal: "Settle the request in one sitting"',
+    '  steps: [ST00003, ST00005]',
+    '  result: "The request is approved or sent back"',
+  ];
+  const BOTH_WAYS = [
+    ...DEFAULT_LINKS,
+    '- { from: ST00003, to: ST00005, condition: approved }',
+    '- { from: ST00003, to: ST00004, condition: rejected }',
+  ];
+
+  // The system's step belongs to the requester's sitting: no warning for it.
+  it('are none for a complete use case of one actor and the system', async () => {
+    expect(await codes({ usecases: SUBMIT })).toEqual([]);
+  });
+
+  it.each(['goal', 'result'])('ask for a missing %s', async (field) => {
+    expect(await codes({ usecases: without(field) })).toEqual([`ubml/usecase-missing-${field}`]);
+  });
+
+  it('point at a step another actor is responsible for', async () => {
+    const result = await check({ usecases: SUBMIT.map((line) => line.replace('ST00002]', 'ST00005]')) });
+    const found = result.warnings.filter((w) => w.code === 'ubml/usecase-actor-not-responsible');
+
+    expect(found).toHaveLength(1);
+    expect(found[0].message).toContain('"ST00005"');
+    expect(found[0].message).toContain('done by AC00002, not by its actor AC00001');
+    expect(found[0].line).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ['no way out', DEFAULT_LINKS],
+    ['one way out', [...DEFAULT_LINKS, '- { from: ST00003, to: ST00005, condition: approved }']],
+  ])('flag a decision with %s', async (wording, links) => {
+    const result = await check({ usecases: DECIDE, links });
+    const found = result.warnings.filter((w) => w.code === 'ubml/usecase-decision-one-way');
+
+    expect(found.map((w) => w.message)).toEqual([
+      `Decision "ST00003" in use case "UC00002" has ${wording} - draw each outcome as a link with a condition`,
+    ]);
+  });
+
+  it('are none for a decision with a link per outcome', async () => {
+    expect(await codes({ usecases: DECIDE, links: BOTH_WAYS })).toEqual([]);
+  });
+
+  // An alt block can hold the branches instead of the links.
+  it('are none for a decision whose branches sit in an alt block', async () => {
+    expect(
+      await codes({
+        usecases: DECIDE,
+        links: [...DEFAULT_LINKS, '- { from: ST00003, to: ST00005 }'],
+        blocks: [
+          'BK00001:',
+          '  name: "Approve?"',
+          '  operator: alt',
+          '  operands:',
+          '    BK00002: { name: Approved, guard: approved, steps: [ST00005] }',
+          '    BK00003: { name: Rejected, guard: rejected, steps: [ST00004] }',
+        ],
+      }),
+    ).toEqual([]);
+  });
+});
