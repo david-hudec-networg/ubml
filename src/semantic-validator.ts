@@ -7,6 +7,7 @@
 
 import { isValidId, REFERENCE_FIELDS, type DocumentType, getIdPrefix } from './metadata.js';
 import type { UBMLDocument } from './parser.js';
+import { validateUseCases } from './usecase-validator.js';
 import { levenshteinDistance } from './utils/index.js';
 
 // =============================================================================
@@ -378,6 +379,10 @@ export function validateDocuments(
     };
     visit(document.content, []);
   }
+
+  const usecases = validateUseCases(documents, (id) => definedIds.has(id));
+  errors.push(...usecases.errors);
+  warnings.push(...usecases.warnings);
 
   // Check for unused IDs (warning only)
   if (!options.suppressUnusedWarnings) {

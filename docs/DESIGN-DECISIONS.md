@@ -1657,6 +1657,12 @@ that `represents` actors and that nothing in a process points at. Every other
 field holding an actor is called `actor`, and RACI, which names actors, is what
 a use case's steps are checked against.
 
+**Two errors keep the cut sound.** A step belongs to at most one use case
+(`ubml/usecase-shared-step`): the cut is by who works through it, so two
+claimants mean one of them is wrong. A use case lists steps of its own process
+only (`ubml/usecase-foreign-step`); steps nested inline in a step count as the
+process's own, steps of a child process do not.
+
 ### Consequences
 
 - A workspace without use cases is unchanged.

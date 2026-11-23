@@ -101,3 +101,76 @@ describe('a use case', () => {
     expect(result.errors.some((e) => e.code === 'ubml/undefined-reference' && e.message.includes('AC00009'))).toBe(true);
   });
 });
+
+describe('the steps of a use case', () => {
+  const DECIDE = ['UC00002:', '  name: "Decide on a purchase request"', '  actor: AC00002', '  steps: [ST00003]'];
+
+  it('belong to one use case only', async () => {
+    const result = await check({ usecases: [...SUBMIT, ...DECIDE.map((line) => line.replace('[ST00003]', '[ST00002, ST00003]'))] });
+    const found = result.errors.filter((e) => e.code === 'ubml/usecase-shared-step');
+
+    expect(found).toHaveLength(1);
+    // Both claimants are named, and the error points at the second claim.
+    expect(found[0].message).toContain('"UC00001" and "UC00002"');
+    expect(found[0].path).toBe('processes.PR00001.usecases.UC00002.steps[0]');
+  });
+
+  it('come from the use case own process', async () => {
+    const result = await check({
+      usecases: SUBMIT.map((line) => line.replace('[ST00001, ST00002]', '[ST00001, ST00091]')),
+      processes: ['PR00009:', '  name: "Supplier onboarding"', '  steps:', '    ST00091: { name: "Register supplier", kind: action }'],
+    });
+
+    expect(result.errors.filter((e) => e.code === 'ubml/usecase-foreign-step').map((e) => e.message)).toEqual([
+      'Use case "UC00001" lists step "ST00091", which is not a step of its process "PR00001" - a use case covers steps of its own process',
+    ]);
+  });
+
+  it('may be steps nested inline in a step of the process', async () => {
+    const result = await check({
+      usecases: [],
+      processes: [
+        'PR00009:',
+        '  name: "Supplier onboarding"',
+        '  steps:',
+        '    ST00091:',
+        '      name: "Onboard supplier"',
+        '      kind: subprocess',
+        '      steps:',
+        '        ST00092: { name: "Check references", kind: action }',
+        '  usecases:',
+        '    UC00009: { name: "Check a new supplier", actor: AC00002, steps: [ST00092] }',
+      ],
+    });
+
+    expect(result.errors).toEqual([]);
+  });
+
+  it('do not include the steps of a child process', async () => {
+    const result = await check({
+      usecases: [],
+      processes: [
+        'PR00009:',
+        '  name: "Supplier onboarding"',
+        '  steps:',
+        '    ST00091: { name: "Register supplier", kind: action }',
+        '  usecases:',
+        '    UC00009: { name: "Register a supplier", actor: AC00002, steps: [ST00092] }',
+        '  subprocesses:',
+        '    PR00010:',
+        '      name: "Reference check"',
+        '      steps:',
+        '        ST00092: { name: "Check references", kind: action }',
+      ],
+    });
+
+    expect(result.errors.map((e) => e.code)).toEqual(['ubml/usecase-foreign-step']);
+  });
+
+  // An id defined nowhere is reported once, as an undefined reference.
+  it('report a step the workspace does not define only as undefined', async () => {
+    const result = await check({ usecases: SUBMIT.map((line) => line.replace('ST00002]', 'ST00099]')) });
+
+    expect(result.errors.map((e) => e.code)).toEqual(['ubml/undefined-reference']);
+  });
+});
