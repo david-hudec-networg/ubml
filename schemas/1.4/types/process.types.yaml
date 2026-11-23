@@ -155,19 +155,122 @@ $defs:
         $ref: "../defs/shared.defs.yaml#/$defs/CustomFields"
 
   # ==========================================================================
+  # USE CASE DEFINITION
+  # ==========================================================================
+
+  UseCase:
+    description: |
+      One actor's part of a process: one goal, reached in one sitting,
+      ending in a result of business value.
+
+      WHY USE CASES EXIST:
+      A process crosses several actors, while requirements, screens and
+      tests are written per actor and goal. A use case cuts the process
+      that way: "What does the approver do to decide on a request?"
+
+      A use case is an OVERLAY: it names steps the process already holds
+      and changes nothing about how they run.
+
+      DERIVED, NOT STORED:
+      - The ways through a use case come from the links between its steps
+        (condition, isDefault) and from alt and opt blocks.
+      - The use case that follows comes from the links that leave its steps,
+        so a decision can continue into different use cases.
+
+      USE CASES vs PHASES vs BLOCKS:
+      - Use cases (UC###): cut by actor and goal; affect nothing
+      - Phases (PH###): cut by time or release; affect nothing
+      - Blocks (BK###): say how steps execute; affect routing
+
+      Example:
+        UC00002:
+          name: "Decide on a purchase request"
+          actor: AC00002
+          goal: "Approve or reject the request in one sitting"
+          steps: [ST00003, ST00004]
+          result: "The request is approved or rejected"
+    type: object
+    additionalProperties: false
+    required: [name, actor, steps]
+    properties:
+      name:
+        description: |
+          Short label naming the goal from the actor's side.
+
+          Examples:
+            - "Submit a purchase request"
+            - "Decide on a purchase request"
+        type: string
+
+      actor:
+        description: |
+          The actor whose goal this is: the one who works through the steps.
+          Typically a role. Steps a system performs during the same sitting
+          belong to the same use case.
+        $ref: "../defs/refs.defs.yaml#/$defs/ActorRef"
+
+      goal:
+        description: |
+          What the actor wants to achieve, in the actor's words.
+
+          Example: "Get the purchase approved before the offer expires"
+        type: string
+
+      steps:
+        description: |
+          Steps of this process that the use case covers.
+          A step belongs to at most one use case.
+        type: array
+        minItems: 1
+        items:
+          $ref: "../defs/refs.defs.yaml#/$defs/StepRef"
+
+      result:
+        description: |
+          The result of business value the actor holds at the end.
+
+          Example: "The request is approved and the buyer can order"
+        type: string
+
+      reviewStatus:
+        description: |
+          Whether a reviewer approved the modelling decision behind this element.
+          Absent means not specified, never accepted.
+        $ref: "../defs/shared.defs.yaml#/$defs/ReviewStatus"
+
+      derivedFrom:
+        description: |
+          Insights that support or justify this use case.
+          Links it back to the knowledge that informed it.
+        type: array
+        items:
+          $ref: "../defs/refs.defs.yaml#/$defs/InsightRef"
+
+      tags:
+        description: "Tags for filtering and views."
+        type: array
+        items:
+          type: string
+
+      custom:
+        description: "User-defined custom fields."
+        $ref: "../defs/shared.defs.yaml#/$defs/CustomFields"
+
+  # ==========================================================================
   # PROCESS DEFINITION
   # ==========================================================================
 
   Process:
     description: |
       The core process model.
-      
+
       Supports:
       - Multi-level hierarchy (L1 strategic to L4 detailed)
       - Cross-process invocation via Step.calls
       - Unified links for routing and scheduling
       - Blocks for control flow grouping (par, alt, loop) - EXECUTION semantics
       - Phases for lifecycle stages and delivery phases - ORGANIZATIONAL overlay
+      - Use cases for one actor's goal-directed part - ORGANIZATIONAL overlay
       
       PROCESS LEVELS:
       - L1: Strategic (value chain level)
@@ -258,7 +361,18 @@ $defs:
         patternProperties:
           "^PH\\d{5,}$":
             $ref: "#/$defs/Phase"
-      
+
+      usecases:
+        description: |
+          One actor's goal-directed parts of this process.
+          Keyed by use case ID (UC### pattern).
+          An overlay: the steps stay in 'steps' and their flow in 'links'.
+        type: object
+        additionalProperties: false
+        patternProperties:
+          "^UC\\d{5,}$":
+            $ref: "#/$defs/UseCase"
+
       subprocesses:
         description: |
           Child processes (for L1-L4 hierarchy).

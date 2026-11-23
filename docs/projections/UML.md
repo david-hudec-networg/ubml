@@ -39,7 +39,9 @@ UBML maps to **four UML diagram types**, each projecting a different facet of th
 | Actor (`type: external`) | Actor | External participant |
 | Actor (`type: system`) | System Boundary | Rectangular boundary |
 | Actor (`type: customer`) | Actor | Primary actor |
-| Process (L1/L2) | Use Case | High-level process as use case |
+| UseCase | Use Case | One actor's goal-directed part of a process |
+| UseCase `actor` | Association with the primary Actor | The actor whose goal it is |
+| Process | Package | Holds the use cases of one process |
 | ProcessCall (sync) | «include» | Required sub-process |
 | ProcessCall (async) | «extend» | Optional/conditional trigger |
 | Actor → Process (via RACI) | Association | Participation |
@@ -153,7 +155,7 @@ UML is a comprehensive software modeling language with 14 diagram types. UBML us
 | Activity Diagram actions | Import as Steps with appropriate `kind` |
 | Activity partitions | Import as Actors |
 | Use Case actors | Import as Actors |
-| Use Cases | Import as high-level Processes |
+| Use Cases | Import as `usecases` once the process holds their steps; until then as high-level Processes |
 | Classes | Import as Entities with attributes |
 | Associations | Import as Entity Relationships |
 | State Machines | Import as Entity `lifecycle` (flattened to ordered list) |

@@ -1591,3 +1591,118 @@ still named, so the original remains findable.
 | **P12.2** Catalog, Not Container | Amended. The artefact is still catalogued; its text is now contained |
 | **P1.4** No Built-In Version Control | Git versions the stored text; no checksum or revision field is added |
 | **P12.1** Minimal Capture Friction | A source with no text stays valid, so capture is never blocked on conversion |
+
+---
+
+## DD-014: A Process Names Its Use Cases
+
+**Status**: Accepted
+
+### Context
+
+A process crosses several actors. The work that follows a model is cut
+differently: requirements, screens and acceptance tests are written for one
+actor reaching one goal. Getting from a process to that work meant cutting the
+process by hand each time, and nothing recorded where the cut was made, so two
+people cut the same process two ways.
+
+UBML had every part of that cut - actors, steps, RACI, links - but not the cut
+itself. The UML projection filled the gap by mapping a whole L1/L2 process to a
+Use Case, which is a coarser thing than a use case in requirements practice.
+
+### Research
+
+- **Cockburn**, *Writing Effective Use Cases*: goal levels; the user-goal level
+  is one actor's goal, reached in one sitting.
+- **Larman**, *Applying UML and Patterns*: the elementary business process, a
+  task one person performs in one place at one time that adds measurable
+  business value and leaves the data consistent.
+- **Jacobson, Spence and Bittner**, *Use-Case 2.0*: a use case is sliced into
+  the ways through it, and those slices are what a backlog is built from.
+- **UML 2.5**: a Use Case is associated with the Actors that take part in it.
+
+### Decision
+
+**A process may name its use cases**: `usecases` on a Process, keyed by
+`UC#####`.
+
+```yaml
+usecases:
+  UC00002:
+    name: "Decide on a purchase request"
+    actor: AC00002
+    goal: "Approve or reject the request in one sitting"
+    steps: [ST00003, ST00004]
+    result: "The request is approved or rejected"
+```
+
+A use case is an **overlay**, like a phase: it names steps the process already
+holds and changes nothing about how they run. It is an element of its own, not
+a third phase kind: a phase is a stage of the process, cut by time or release,
+and a use case is not a stage.
+
+**`name`, `actor` and `steps` are required.** `goal` and `result` are what make
+it a use case, but an analyst capturing one in a workshop often has the steps
+before anyone has said the goal out loud, and a required field would push a
+pipeline to invent one.
+
+**Derived, never stored:**
+
+- The ways through a use case come from the links between its steps
+  (`condition`, `isDefault`) and from `alt` and `opt` blocks.
+- The use case that follows comes from the links that leave its steps.
+
+**`actor`, not `persona`.** UBML already has a Persona (`PS#####`), an archetype
+that `represents` actors and that nothing in a process points at. Every other
+field holding an actor is called `actor`, and RACI, which names actors, is what
+a use case's steps are checked against.
+
+**Two errors keep the cut sound.** A step belongs to at most one use case
+(`ubml/usecase-shared-step`): the cut is by who works through it, so two
+claimants mean one of them is wrong. A use case lists steps of its own process
+only (`ubml/usecase-foreign-step`); steps nested inline in a step count as the
+process's own, steps of a child process do not.
+
+**Three warnings ask what the model has not said yet**, and none blocks a commit:
+
+- `goal` or `result` is missing (`ubml/usecase-missing-goal`, `-result`).
+- A step's RACI names someone else as responsible
+  (`ubml/usecase-actor-not-responsible`), which usually means the use case spans
+  two actors. A step a `system` actor is responsible for is not reported: it is
+  the system's half of the actor's sitting.
+- A `decision` step has fewer than two links out (`ubml/usecase-decision-one-way`),
+  so its other outcomes are missing from the ways through the use case. A decision
+  whose branches sit in an `alt` or `opt` block is not reported, because the
+  block holds them.
+
+### Consequences
+
+- A workspace without use cases is unchanged.
+- The UML projection maps a UseCase to a Use Case, with `actor` as its primary
+  actor; the Process becomes the package holding them. The previous row mapping
+  an L1/L2 Process to a Use Case is replaced.
+- Steps a system performs during the sitting belong to the use case: the
+  system's half of the dialogue is part of reaching the goal.
+- Nothing inside UBML references a use case, so `ubml validate` lists each one
+  under `ubml/unused-id`, as it already does for phases, unless
+  `--suppress-unused` is given.
+
+### Alternatives considered
+
+| Alternative | Why not |
+|---|---|
+| A third phase kind, `usecase` | A phase is a stage of the process. A use case is not, and reading it as one misleads. |
+| A `next` field naming the use case that follows | Restates the links (P1.3), and holds one value where an approval continues into different use cases by outcome. |
+| A field called `persona` holding an actor | Collides with the Persona element and with `actor` everywhere else. |
+| A reference to a Persona (`PS#####`) | Every use case would need a persona beside its actor, and nothing else in a process points at personas. |
+| Stored paths | Restate the links and blocks, and drift when the flow changes. |
+| Required `goal` and `result` | A pipeline would have to invent what the source never said. |
+
+### Related principles
+
+| Principle | Relationship |
+|-----------|--------------|
+| **P1.3** No Computed Aggregations | The ways through a use case and the use case that follows are derived, not stored |
+| **P3.1** Nesting for Ownership | A use case cannot exist without its process, so it is nested in it |
+| **P6.3** Consistent Naming Across Schema | `actor`, as in every other field that holds one |
+| **P10.5** New Primitives Require Projection Mapping | BPMN, ArchiMate and UML mappings added with the element |

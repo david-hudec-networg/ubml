@@ -76,6 +76,7 @@ const TOPICS: Record<string, () => void> = {
   // Control flow concepts - use schema introspection
   blocks: () => showConceptHelp('Block'),
   phases: () => showConceptHelp('Phase'),
+  usecases: () => showConceptHelp('UseCase'),
   
   // Reference
   ids: showIdPatterns,
