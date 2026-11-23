@@ -22,6 +22,7 @@ ArchiMate is the **primary enterprise architecture export target**. UBML maps ac
 | Actor (`type: external`) | Business Actor | Active Structure | External flag |
 | Actor (`type: customer`) | Business Actor | Active Structure | External stakeholder |
 | Process | Business Process | Behavioral | Core workflow |
+| UseCase | Business Process | Behavioral | One actor's goal-directed part, composed into its Process and assigned to the `actor`'s Business Role |
 | Step (`kind: action`) | Business Function | Behavioral | Unit of work |
 | Step (`kind: subprocess`) | Business Process | Behavioral | Composite process |
 | Step (`kind: decision`) | *(embedded in flow)* | — | ArchiMate has no gateway concept |
@@ -54,6 +55,8 @@ ArchiMate is the **primary enterprise architecture export target**. UBML maps ac
 | Persona.goals | Goal | Strategic/tactical goal |
 | Persona.painPoints | Assessment | Evaluation of current state |
 | Persona.motivations | Driver | Internal/external influence |
+| UseCase.goal | Goal | What the use case's actor wants |
+| UseCase.result | Outcome | The result of business value the use case ends in; realizes its Goal |
 | HypothesisTree | *(no equivalent)* | UBML-specific analytical structure |
 | HypothesisNode (recommendation) | Requirement | Actionable outcome of hypothesis |
 | KPI | *(no equivalent)* | Model as Assessment with metric properties |

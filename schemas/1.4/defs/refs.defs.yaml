@@ -463,6 +463,25 @@ $defs:
       category: process-elements
       categoryDisplayName: "Process Elements"
 
+  UseCaseRef:
+    description: |
+      Reference to a use case (UC### pattern).
+
+      A use case is one actor's part of a process: one goal, reached in
+      one sitting, ending in a result of business value. Like a phase it
+      overlays the process's own steps and changes nothing about how they run.
+
+      Examples: UC00001, UC00010, UC00100
+    type: string
+    pattern: "^UC\\d{5,}$"
+    x-ubml:
+      prefix: "UC"
+      humanName: "Use Case ID"
+      shortDescription: "Use cases"
+      errorHint: "UC + 5+ digits (e.g., UC00001, UC00010)"
+      category: process-elements
+      categoryDisplayName: "Process Elements"
+
   PersonaRef:
     description: |
       Reference to a persona (PS### pattern).

@@ -92,6 +92,10 @@ Phases have **no direct BPMN equivalent**. Options:
 - **Text Annotation** — Attached to first step
 - **Sub-Process boundaries** — Changes flow semantics (not recommended)
 
+### Use Case → BPMN
+
+Use cases have **no direct BPMN equivalent** either. A **Group artifact** around the use case's steps, labelled with its name, shows it without changing the flow; its `actor` is already the lane those steps sit in.
+
 ### Process-Level Properties
 
 | UBML Property | BPMN Mapping |

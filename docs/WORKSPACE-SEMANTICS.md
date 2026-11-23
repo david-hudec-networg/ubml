@@ -74,7 +74,7 @@ The operational model describes **how the organization works today** (or how a p
 
 ### Processes
 
-The core of most UBML workspaces. Processes describe workflows as sequences of steps — actions, decisions, handoffs, milestones, waits. Steps can call other processes, require approvals, trigger notifications, and loop. Processes are organized using phases (lifecycle groupings) and blocks (control flow). Steps connect through links that model routing, conditions, and scheduling dependencies.
+The core of most UBML workspaces. Processes describe workflows as sequences of steps — actions, decisions, handoffs, milestones, waits. Steps can call other processes, require approvals, trigger notifications, and loop. Processes are organized using phases (lifecycle groupings) and blocks (control flow). Steps connect through links that model routing, conditions, and scheduling dependencies. Use cases cut a process by who reaches which goal: each names one actor and the steps that actor works through in one sitting, and the ways through it are read from the links.
 
 Processes follow a four-level hierarchy (L1–L4) that mirrors frameworks like APQC: from high-level value chains down to individual tasks.
 

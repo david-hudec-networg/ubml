@@ -166,7 +166,7 @@ Best for: **Hypothesis tree decomposition**
 
 | PlantUML Diagram | Why No UBML Source |
 |-----------------|-------------------|
-| **Use Case Diagram** | Partially mappable (see UML), but UBML processes are richer than use cases |
+| **Use Case Diagram** | Mappable from `usecases`: each `usecase` with its `actor` (see UML) |
 | **Component Diagram** | Software architecture (out of scope) |
 | **Deployment Diagram** | Infrastructure (out of scope) |
 | **Object Diagram** | Instance-level data (UBML models types) |
